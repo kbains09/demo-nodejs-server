@@ -25,7 +25,8 @@ const Task = mongoose.model('Task', {
 app.use(bodyParser.json());
 
 // API routes
-app.get('/api/tasks', async (req, res) => {
+//get all tasks
+app.get('/tasks', async (req, res) => {
   try {
     const tasks = await Task.find();
     res.json(tasks);
@@ -34,7 +35,8 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-app.post('/api/tasks', async (req, res) => {
+//create a new task
+app.post('/tasks', async (req, res) => {
   try {
     const task = new Task(req.body);
     await task.save();
@@ -43,6 +45,48 @@ app.post('/api/tasks', async (req, res) => {
     res.status(400).json({ error: 'Bad Request' });
   }
 });
+
+// Get a specific task by ID
+app.get('/tasks/:id', async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Update a task by ID
+app.patch('/tasks/:id', async (req, res) => {
+  try {
+    const task = await Task.findByIdAndUpdate(req.params.id, req.body, {
+      new: true, // Return the updated task
+    });
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    res.json(task);
+  } catch (error) {
+    res.status(400).json({ error: 'Bad Request' });
+  }
+});
+
+// Delete a task by ID
+app.delete('/tasks/:id', async (req, res) => {
+  try {
+    const task = await Task.findByIdAndDelete(req.params.id);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 // Start the server
 app.listen(port, () => {

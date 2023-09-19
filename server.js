@@ -1,9 +1,33 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Secret key for JWT signing (should be stored securely)
+const jwtSecret = 'your-secret-key';
+
+// Middleware to authenticate user
+const authenticateUser = (req, res, next) => {
+  // Get the token from the request header
+  const token = req.header('Authorization');
+
+  // Check if the token exists
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Verify the token
+    const decoded = jwt.verify(token, jwtSecret);
+    req.user = decoded; // Store user information in the request object
+    next(); // Continue with the next middleware or route handler
+  } catch (error) {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+};
 
 // Connect to MongoDB (make sure MongoDB is running)
 mongoose.connect('mongodb://localhost/task_management', {
@@ -26,6 +50,12 @@ app.use(bodyParser.json());
 
 // API routes
 //get all tasks
+// Example route with authentication
+app.get('/secure-route', authenticateUser, (req, res) => {
+  // Access user information using req.user
+  res.json({ message: 'Authenticated Route', user: req.user });
+});
+
 app.get('/tasks', async (req, res) => {
   try {
     const tasks = await Task.find();

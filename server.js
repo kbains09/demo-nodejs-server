@@ -6,6 +6,11 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const User = mongoose.model('User', {
+  username: String,
+  password: String, // Store hashed passwords securely
+});
+
 // Secret key for JWT signing (should be stored securely)
 const jwtSecret = 'your-secret-key';
 
@@ -49,13 +54,47 @@ const Task = mongoose.model('Task', {
 app.use(bodyParser.json());
 
 // API routes
-//get all tasks
+// User registration (Add this route)
+app.post('/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = new User({ username, password });
+    // Hash and save the password securely
+    // You can use a library like bcrypt for password hashing
+    // ...
+    await user.save();
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (error) {
+    res.status(400).json({ error: 'Registration failed' });
+  }
+});
+
+// User login (Add this route)
+app.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    // Verify the password (compare with the hashed password in the database)
+    // You can use bcrypt.compare for password comparison
+    // ...
+    // If the password is valid, generate a JWT and send it back
+    const token = jwt.sign({ userId: user._id }, jwtSecret);
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // Example route with authentication
 app.get('/secure-route', authenticateUser, (req, res) => {
   // Access user information using req.user
   res.json({ message: 'Authenticated Route', user: req.user });
 });
 
+//get all tasks
 app.get('/tasks', async (req, res) => {
   try {
     const tasks = await Task.find();
@@ -77,15 +116,17 @@ app.post('/tasks', async (req, res) => {
 });
 
 // Get a specific task by ID
-app.get('/tasks/:id', async (req, res) => {
+app.get('/tasks/:id', async (req, res, next) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
+      const notFoundError = new Error('Task not found');
+      notFoundError.status = 404;
+      throw notFoundError;
     }
     res.json(task);
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    next(error); // Pass the error to the error handler
   }
 });
 
@@ -117,10 +158,21 @@ app.delete('/tasks/:id', async (req, res) => {
   }
 });
 
+// Error handling middleware (Your existing error handler)
+const errorHandler = (err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ error: 'Internal Server Error' });
+};
+
+app.use(errorHandler);
 
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-//add user authentication and more error handling to the API
+
+//Make sure you have defined the User model and implemented password hashing properly according to your chosen library (e.g., bcrypt) before using it in the registration and login routes.

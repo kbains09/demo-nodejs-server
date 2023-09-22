@@ -177,3 +177,4 @@ app.listen(port, () => {
 
 //Make sure you have defined the User model and implemented password hashing properly according to your chosen library (e.g., bcrypt) before using it in the registration and login routes.
 //You can use the following code to generate a hashed password:
+//qpc

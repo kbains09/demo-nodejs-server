@@ -4,7 +4,6 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt'); 
 const { body, validationResult } = require('express-validator');
-const express = require('express');
 const expressSanitizer = require('express-sanitizer');
 
 const app = express();
@@ -14,9 +13,6 @@ const User = mongoose.model('User', {
   username: String,
   password: String, // Store hashed passwords securely
 });
-
-// Secret key for JWT signing (should be stored securely)
-const jwtSecret = 'your-secret-key';
 
 // Middleware to authenticate user
 const authenticateUser = (req, res, next) => {

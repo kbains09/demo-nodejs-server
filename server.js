@@ -9,6 +9,9 @@ const expressSanitizer = require('express-sanitizer');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Secret key for JWT signing (should be stored securely)
+const jwtSecret = 'your-secret-key';
+
 const User = mongoose.model('User', {
   username: String,
   password: String, // Store hashed passwords securely
@@ -35,7 +38,7 @@ const authenticateUser = (req, res, next) => {
 };
 
 // Connect to MongoDB (make sure MongoDB is running)
-mongoose.connect('mongodb://localhost/mongodb-data', {
+mongoose.connect('mongodb://localhost/data', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt'); 
+const { body, validationResult } = require('express-validator');
+const express = require('express');
+const expressSanitizer = require('express-sanitizer');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -36,7 +39,7 @@ const authenticateUser = (req, res, next) => {
 };
 
 // Connect to MongoDB (make sure MongoDB is running)
-mongoose.connect('mongodb://localhost/task_management', {
+mongoose.connect('mongodb://localhost/mongodb-data', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -55,14 +58,27 @@ const Task = mongoose.model('Task', {
 app.use(bodyParser.json());
 
 // API routes
-// User registration (Add this route)
-app.post('/register', async (req, res) => {
+app.post('/register', [
+  // Validate username
+  body('username').isLength({ min: 5 }).withMessage('Username must be at least 5 characters long'),
+  // Validate password
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
+], async (req, res) => {
+  // Check for validation errors
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     const { username, password } = req.body;
     const user = new User({ username, password });
-    // Hash and save the password securely
-    // You can use a library like bcrypt for password hashing
-    // ...
+
+    // Hash and save the password securely (bcrypt)
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    user.password = hashedPassword;
+
     await user.save();
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
@@ -71,19 +87,32 @@ app.post('/register', async (req, res) => {
 });
 
 // User login (Add this route)
-app.post('/login', async (req, res) => {
+app.post('/login', [
+  // Validate username
+  body('username').isLength({ min: 5 }).withMessage('Username must be at least 5 characters long'),
+  // Validate password
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
+], async (req, res) => {
+  // Check for validation errors
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   try {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-     // Compare the provided password with the stored hashed password
-     const passwordMatch = await bcrypt.compare(password, user.password);
-    
-     if (!passwordMatch) {
-       return res.status(401).json({ error: 'Invalid credentials' });
-     }
+
+    // Compare the provided password with the stored hashed password
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
     // If the password is valid, generate a JWT and send it back
     const token = jwt.sign({ userId: user._id }, jwtSecret);
     res.json({ token });
@@ -111,14 +140,23 @@ app.get('/tasks', async (req, res) => {
 //create a new task
 app.post('/tasks', async (req, res) => {
   try {
-    const task = new Task(req.body);
+    // Sanitize user inputs
+    const sanitizedTitle = req.sanitize(req.body.title);
+    const sanitizedDescription = req.sanitize(req.body.description);
+
+    // Create the task with sanitized data
+    const task = new Task({
+      title: sanitizedTitle,
+      description: sanitizedDescription,
+      completed: false, // Set a default value if needed
+    });
+
     await task.save();
     res.status(201).json(task);
   } catch (error) {
     res.status(400).json({ error: 'Bad Request' });
   }
 });
-
 // Get a specific task by ID
 app.get('/tasks/:id', async (req, res, next) => {
   try {

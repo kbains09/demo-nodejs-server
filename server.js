@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -77,9 +78,12 @@ app.post('/login', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    // Verify the password (compare with the hashed password in the database)
-    // You can use bcrypt.compare for password comparison
-    // ...
+     // Compare the provided password with the stored hashed password
+     const passwordMatch = await bcrypt.compare(password, user.password);
+    
+     if (!passwordMatch) {
+       return res.status(401).json({ error: 'Invalid credentials' });
+     }
     // If the password is valid, generate a JWT and send it back
     const token = jwt.sign({ userId: user._id }, jwtSecret);
     res.json({ token });
